@@ -1,5 +1,6 @@
 (ns group-redis.core
   (:require [fun-utils.core :refer [fixdelay]]
+            [clojure.core.async :refer [chan >! <! >!! go mult tap untap sliding-buffer close!]]
             [taoensso.carmine :as car :refer [wcar]])
   (:import [java.net InetAddress]))
 
@@ -25,8 +26,11 @@
   (clojure.string/join ["/" (clojure.string/join "/" (flatten [group-name "locks" path]))]))
 
 
-(defn close [{:keys [state-ref]}]
+(defn close [{:keys [state-ref member-event-ch heart-beat-ch]}]
   ;delete connection's state
+  (close! heart-beat-ch)
+  (close! member-event-ch)
+  
   (dosync (alter state-ref (fn [state] {}))))
                         
 (defn create-connection 
@@ -107,16 +111,15 @@
 
 
 (defn get-members [{:keys [conn] :as connector}]
-  (map (fn [path]
-         {:path path :val (System/currentTimeMillis)})
-       (car/wcar conn
-            (car/keys (clojure.string/join [(members-path connector) "/*"])))))
-
+  (into #{} (map (fn [path]
+									 {:path path :val (System/currentTimeMillis)})
+                 (car/wcar conn
+									            (car/keys (clojure.string/join [(members-path connector) "/*"]))))))
 
 (defn join 
   ([connector]
     (join connector host-name))
-  ([{:keys [conn conf state-ref] :as connector} node-name]
+  ([{:keys [conn conf member-event-ch state-ref] :as connector} node-name]
     (let [{:keys [heart-beat-freq]} conf
           path (members-path connector node-name)
           val (System/currentTimeMillis)]
@@ -126,22 +129,45 @@
                 )
      (dosync (alter state-ref 
             (fn [state]
-               (assoc state :members (conj (:members state) {:path path :val val}))
-              ))))))
+               (assoc state :members (into #{} (conj (:members state) {:path path :val val})))
+              )))
+     (>!! member-event-ch {:left-members #{} :joined-members #{node-name}})
+     )))
      
        
 	    
+(defn- members-left [members u-members]
+  (clojure.set/difference (into #{} (map :path members)) (into #{} (map :path u-members))))
+
+(defn- members-joined [members u-members]
+  (clojure.set/difference (into #{} (map :path u-members)) (into #{} (map :path members))))
+
 (defn heart-beat [connector {:keys [members locks empherals] :as state}]
   "Sends out the heart beat and updates all TTL nodes,
    The members are queried and if any difference a fresh list created for the state
    which is returned"
   (send-updates connector (concat members locks empherals))
-  (let [u-members (get-members connector)]
-   
-    (if (not (= members u-members))
-     (merge state {:members u-members})
-      state)))
+    ;(prn "calling lef-members " members " " u-members)
+    (let [u-members (get-members connector)
+          left-members (if (> (count members) 0) (members-left members u-members) #{})
+          joined-members (members-joined members u-members)]
+        
+         ;publish event
+        (if (or (> (count left-members) 0) (> (count joined-members) 0))
+          (>!! (:member-event-ch connector) {:left-members left-members :joined-members joined-members}))
 
+        (if (not (= members u-members))
+		      (merge state {:members u-members})
+		           state)))
+
+(defn unregister-event-ch [{:keys [member-event-mult]} ch]
+  (untap member-event-mult ch))
+
+(defn register-member-event-ch [{:keys [member-event-mult]}]
+  "Returns a channel from which member register events can be read"
+  (let [ch (chan (sliding-buffer 10))]
+    (tap member-event-mult ch)
+    ch))
 
 (defn create-group-connector 
   ([host]
@@ -152,11 +178,14 @@
   (let [state-ref (ref {:members #{} :locks #{} :empherals #{}})
         conf2 (merge conf {:group-name group-name :heart-beat-freq heart-beat-freq})
         c (create-connection host conf)
-        connector {:conn c :state-ref state-ref :conf conf2 :host host :group-name group-name}]
+        member-event-ch (chan (sliding-buffer 10))
+        member-event-mult (mult member-event-ch)
+        connector {:conn c :state-ref state-ref :conf conf2 :host host :group-name group-name
+                   :member-event-ch member-event-ch :member-event-mult member-event-mult}
     
-    (fixdelay (* heart-beat-freq 1000) 
-              (dosync 
-                (alter state-ref (partial heart-beat connector))))
-     connector)))
+		    heart-beat-ch (fixdelay (* heart-beat-freq 1000) 
+								              (dosync 
+								                (alter state-ref (partial heart-beat connector))))]
+      (assoc connector :heart-beat-ch heart-beat-ch))))
         
         
