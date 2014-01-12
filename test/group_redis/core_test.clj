@@ -26,4 +26,12 @@
                
                (release c "another-member" "lock1") => false
                (release c "lock1") => true
-               (release c "lock1") => false)))
+               (release c "lock1") => false))
+       
+       (fact "Test Empheral"
+             (let [c (create-group-connector "localhost")]
+               
+               (empheral-set c "abc" 1)
+               (empheral-get c "abc") => 1
+               
+               )))

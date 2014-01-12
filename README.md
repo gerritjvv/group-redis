@@ -24,7 +24,7 @@ Group management api that supports locks, empheral data and membership join and 
 Join a specific group
 
 ```clojure
-(use 'group-redis.core :reload)
+(use 'group-redis.core)
 
 ;join the default-group
 (def c (create-group-connector "localhost" {:group-name "mygroup" :heart-beat-freq 10}))
@@ -43,10 +43,31 @@ All member entries are set with ```EXPIRE``` ```(/ heart-beat-freq 2)```, this m
 if the member's jvm crashes, freezes or ends, its entry will automatically expire in n seconds,
 and other members on querying get-members will see the member has leaved. 
 
+### Locks 
+
+Locks will be released automatically when the client connections closes, crashes or stalls.
+Note that GC collections might be a problem here if pauses are longer than the heart beat.
+Make sure that the heart beat is longer than the expected GC pause.
+
+```clojure
+(use 'group-redis.core)
+
+(lock c "lock1")
+;; true
+
+(lock c "lock1")
+;; false
+               
+(release c "another-member" "lock1")
+;; false
+
+(release c "lock1")
+;; true
+(release c "lock1")
+;; false
+ ```
 
 ## License
 
-Copyright © 2014 FIXME
+Distributed under the Eclipse Public License either version 1.0
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.

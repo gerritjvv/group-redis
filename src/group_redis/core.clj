@@ -25,7 +25,9 @@
   (clojure.string/join ["/" (clojure.string/join "/" (flatten [group-name "locks" path]))]))
 
 
-(defn close [connector])
+(defn close [{:keys [state-ref]}]
+  ;delete connection's state
+  (dosync (alter state-ref (fn [state] {}))))
                         
 (defn create-connection 
   "Creates a redis connection the default port used is 6379"
@@ -43,6 +45,15 @@
   "Takes the heart-beat-freq and calculates the time to live relative to the heart beat"
       (long (+ heart-beat-freq (/ heart-beat-freq 2))))
 
+
+(defn empheral-set [{:keys [conn state-ref] :as connector} path val]
+  (let [final-path (empherals-path connector path)]
+    (dosync (alter state-ref (fn [state] (assoc state :empherals (into #{} (conj (:empherals state) {:path final-path :val val}))))))
+    (car/wcar conn (car/set final-path val))))
+
+(defn empheral-get [connector path ]
+  (->> connector :state-ref deref :empherals (filter #(= (:path %) (empherals-path connector path) )) first :val))
+
 (defn release 
   "Releases the lock, return true if the lock was released, false otherwise"
   ([connecor path]
@@ -54,14 +65,13 @@
     (if (= (:member lock-val) member)
       (do 
         ;remove from state
-        (dosync (alter state-ref (fn [state]
-                                   (assoc state :locks (drop-while #(= (:path %) lock-path) (:locks state)))))) 
-        ;delete from redis
-        (car/wcar conn (car/del lock-path))
+        (try (dosync (alter state-ref (fn [state]
+                                   (assoc state :locks (drop-while #(= (:path %) lock-path) (:locks state))))))
+          (finally ;delete from redis
+                 (car/wcar conn (car/del lock-path))))
         true)
       false))))
       
-        
   
 (defn lock 
   "Returns true if the lock was obtained"
