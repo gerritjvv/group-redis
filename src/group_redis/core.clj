@@ -40,7 +40,50 @@
 
 
 (defn calc-ttl [heart-beat-freq]
+  "Takes the heart-beat-freq and calculates the time to live relative to the heart beat"
       (long (+ heart-beat-freq (/ heart-beat-freq 2))))
+
+(defn release 
+  "Releases the lock, return true if the lock was released, false otherwise"
+  ([connecor path]
+    (release connecor host-name path))
+  ([{:keys [conn conf state-ref] :as connector} member path]
+  (let [lock-path (lock-path connector path)
+        lock-val (car/wcar conn (car/get lock-path))]
+    
+    (if (= (:member lock-val) member)
+      (do 
+        ;remove from state
+        (dosync (alter state-ref (fn [state]
+                                   (assoc state :locks (drop-while #(= (:path %) lock-path) (:locks state)))))) 
+        ;delete from redis
+        (car/wcar conn (car/del lock-path))
+        true)
+      false))))
+      
+        
+  
+(defn lock 
+  "Returns true if the lock was obtained"
+  ([connector path]
+    (lock connector host-name path))
+  ([{:keys [conn conf state-ref] :as connector} member path]
+  (let [lock-path (lock-path connector path)
+        {:keys [heart-beat-freq]} conf
+        expire (calc-ttl heart-beat-freq)
+        val {:member member :ts (System/currentTimeMillis)}
+		    [has-lock? _] (car/wcar conn
+                              (car/setnx lock-path val)
+		                                   (car/expire lock-path expire))]
+    
+        (if (= has-lock? 1)
+          (dosync (alter state-ref 
+            (fn [state]
+               (assoc state :locks (conj (:locks state) {:path lock-path :val val}))))))
+        
+        (= has-lock? 1))))
+    
+
 
 (defn send-updates [{:keys [conn conf] :as connector} records]
   "Iterates trough all records calling set using the keys [path val] in each record"
@@ -76,7 +119,7 @@
                (assoc state :members (conj (:members state) {:path path :val val}))
               ))))))
      
-	              
+       
 	    
 (defn heart-beat [connector {:keys [members locks empherals] :as state}]
   "Sends out the heart beat and updates all TTL nodes,
