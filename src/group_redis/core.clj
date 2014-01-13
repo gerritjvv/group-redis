@@ -98,6 +98,16 @@
         (= has-lock? 1))))
     
 
+(defn reentrant-lock 
+  "If the lock is held by the current member, true is returned, otherwise false if the lock was not held before"
+  ([connector path]
+   (reentrant-lock connector host-name path))
+  ([{:keys [conn state-ref] :as connector} member path]
+    (if (lock connector member path)
+      true
+      (let [val (car/wcar conn (car/get (lock-path connector path)))]
+        (if (= member (:member val)) true false)))))
+  
 
 (defn send-updates [{:keys [conn conf] :as connector} records]
   "Iterates trough all records calling set using the keys [path val] in each record"

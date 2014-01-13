@@ -6,7 +6,7 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.1.0-SNAPSHOT"]```
+```[group-redis "0.1.1-SNAPSHOT"]```
 
 ### Joining a group
 
@@ -67,6 +67,20 @@ Make sure that the heart beat is longer than the expected GC pause.
 ;; true
 (release c "lock1")
 ;; false
+
+(reentrant-lock c "lock2")
+;; true
+(reentrant-lock c "lock2")
+;; true
+
+(reentrant-lock c "another-member" "lock2")
+;; false
+(lock c "another-member" "lock2")
+;; false
+
+(release c "lock2")
+;; true
+
  ```
 ### Event listeners
 

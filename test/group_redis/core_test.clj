@@ -30,6 +30,18 @@
                (release c "lock1") => true
                (release c "lock1") => false))
        
+       (fact "Test reentrant-lock"
+             (let [c (create-group-connector "localhost")]
+               
+               (reentrant-lock c "lock2") => true
+               (reentrant-lock c "lock2") => true
+               
+               (reentrant-lock c "another-member" "lock2") => false
+               (lock c "another-member" "lock2") => false
+               
+               (release c "lock2") => true
+               (release c "lock2") => false))
+
        (fact "Test Empheral"
              (let [c (create-group-connector "localhost")]
                
