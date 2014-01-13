@@ -6,6 +6,8 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
+```[group-redis "0.1.0-SNAPSHOT"]```
+
 ### Joining a group
 
 ```clojure

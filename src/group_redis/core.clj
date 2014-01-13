@@ -188,4 +188,13 @@
 								                (alter state-ref (partial heart-beat connector))))]
       (assoc connector :heart-beat-ch heart-beat-ch))))
         
+(defn get-members [{:keys [state-ref]}]
+  (:members @state-ref))
+
+(defn get-locks [{:keys [state-ref]}]
+  (:locks @state-ref))
+
+(defn get-group-name [{:keys [group-name]}]
+  group-name)
+
         
