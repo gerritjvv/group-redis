@@ -66,6 +66,34 @@ Make sure that the heart beat is longer than the expected GC pause.
 (release c "lock1")
 ;; false
  ```
+### Event listeners
+
+The https://github.com/clojure/core.async project is used to provide async channels, from which events can be read.
+i.e. rather than a callback function you get a channel from which you can read member leave and join events.
+
+The event data structure is: ```clojure {:left-members #{}, :joined-members #{"abc"}}```
+
+
+```clojure
+
+(use 'group-redis.core :reload)
+(require '[clojure.core.async :refer [go <! >!]])
+(use 'clojure.tools.logging)
+
+(def c (create-group-connector "localhost"))
+(def c1 (register-member-event-ch c)) ;this registers an event and returns a channel
+
+;we use a go loop to print out the events, note do not use while true, because
+;if the connector is closed this channel will return nil always
+(go (loop [] (if-let [c (<! c1)]
+               (do (info c) (recur)))))
+
+;join the current host as a member
+(join c)
+
+;;INFO: {:left-members #{}, :joined-members #{myhost-local}}
+
+```
 
 ## License
 

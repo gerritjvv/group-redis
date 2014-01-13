@@ -1,6 +1,8 @@
 (ns group-redis.core-test
-  (:require [group-redis.core :refer :all])
-  (:use midje.sweet))
+  (:require [group-redis.core :refer :all]
+            [clojure.core.async :refer [<!!]])
+  (:use midje.sweet)
+  (:import [java.net InetAddress]))
 
 (facts "Test Redis group management"
        
@@ -34,4 +36,11 @@
                (empheral-set c "abc" 1)
                (empheral-get c "abc") => 1
                
-               )))
+               ))
+       
+       (fact "Test Events"
+             (let [c (create-group-connector "localhost")
+                   c1 (register-member-event-ch c)]
+                 (join c)
+                 (<!! c1) => {:left-members #{}, :joined-members #{(-> (InetAddress/getLocalHost) (.getHostName))}}
+                 )))
