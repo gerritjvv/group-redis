@@ -19,6 +19,10 @@
   ([{:keys [group-name]}]
   (clojure.string/join ["/" (clojure.string/join "/" [group-name "members"])])))
 
+
+(defn persistent-path [{:keys [group-name]} & path]
+  (clojure.string/join ["/" (clojure.string/join "/" (flatten [group-name "persistent" path]))]))
+
 (defn empherals-path [{:keys [group-name]} & path]
   (clojure.string/join ["/" (clojure.string/join "/" (flatten [group-name "empherals" path]))]))
 
@@ -50,10 +54,23 @@
       (long (+ heart-beat-freq (/ heart-beat-freq 2))))
 
 
-(defn empheral-set [{:keys [conn state-ref] :as connector} path val]
-  (let [final-path (empherals-path connector path)]
-    (dosync (alter state-ref (fn [state] (assoc state :empherals (into #{} (conj (:empherals state) {:path final-path :val val}))))))
+(defn persistent-set [{:keys [conn state-ref] :as connector} path]
+  (let [final-path (persistent-set connector path)]
+    (car/wcar conn (car/get final-path))))
+
+(defn persistent-get [{:keys [conn state-ref] :as connector} path val]
+  (let [final-path (persistent-set connector path)]
     (car/wcar conn (car/set final-path val))))
+
+  
+(defn empheral-set [{:keys [conn state-ref conf] :as connector} path val]
+  (let [final-path (empherals-path connector path)
+        {:keys [heart-beat-freq]} conf
+        expire (calc-ttl heart-beat-freq)]
+    (dosync (alter state-ref (fn [state] (assoc state :empherals (into #{} (conj (:empherals state) {:path final-path :val val}))))))
+    (car/wcar conn 
+              (car/set final-path val)
+              (expire final-path expire))))
 
 (defn empheral-get [connector path ]
   (->> connector :state-ref deref :empherals (filter #(= (:path %) (empherals-path connector path) )) first :val))
