@@ -6,12 +6,12 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.1.2-SNAPSHOT"]```
+```[group-redis "0.1.3-SNAPSHOT"]```
 
 ### Joining a group
 
 ```clojure
-(use 'group-redis.core :reload)
+(use 'group-redis.core)
 
 ;join the default-group
 (def c (create-group-connector "localhost"))
@@ -92,7 +92,7 @@ The event data structure is: ```clojure {:left-members #{}, :joined-members #{"a
 
 ```clojure
 
-(use 'group-redis.core :reload)
+(use 'group-redis.core)
 (require '[clojure.core.async :refer [go <! >!]])
 (use 'clojure.tools.logging)
 
@@ -108,6 +108,43 @@ The event data structure is: ```clojure {:left-members #{}, :joined-members #{"a
 (join c)
 
 ;;INFO: {:left-members #{}, :joined-members #{myhost-local}}
+
+```
+
+### Empheral set/get
+
+These sets expire when the connection is closed or the jvm crashes, or freezes.
+
+```clojure
+(use 'group-redis.core)
+(def c (create-group-connector "localhost"))
+
+(empheral-set c "mykey1" 1)
+;; ["OK" 1]
+
+(empheral-get c "mykey1")
+;; 1
+
+### Persistent set/get
+
+Set data with a path prefix of ```/[group-name]/persistent/[path..]```
+
+```clojure
+(use 'group-redis.core)
+(def c (create-group-connector "localhost"))
+
+(persistent-set c "1/2" {:a "hi"})
+;; "OK"
+
+(persistent-get c "1/2")
+;; {:a "hi"}
+
+(persistent-set* c [["t/1" 1] ["t/2" 2] ["t/3" 3]])
+;; ["OK" "OK" "OK"]
+;; data is: keys /default-group/persistent/*
+;;  "/default-group/persistent/t/3"
+;;  "/default-group/persistent/t/2"
+;;  "/default-group/persistent/t/1"
 
 ```
 
