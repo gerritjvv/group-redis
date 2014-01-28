@@ -4,7 +4,6 @@
             [taoensso.carmine :as car :refer [wcar]])
   (:import [java.net InetAddress]))
 
-;(get-conf2 :etl-redis-port 6379
 
 ;Paths
 ; /[group-name]/members/[node-name]
@@ -145,11 +144,11 @@
               ))))
 
 
-(defn get-members [{:keys [conn] :as connector}]
+(defn get-remote-members [{:keys [conn] :as connector}]
   (into #{} (map (fn [path]
-									 {:path path :val (System/currentTimeMillis)})
-                 (car/wcar conn
-									            (car/keys (clojure.string/join [(members-path connector) "/*"]))))))
+		    {:path path :val (System/currentTimeMillis)})
+                    (car/wcar conn
+		       (car/keys (clojure.string/join [(members-path connector) "/*"]))))))
 
 (defn join 
   ([connector]
@@ -164,7 +163,10 @@
                 )
      (dosync (alter state-ref 
             (fn [state]
-               (assoc state :members (into #{} (conj (:members state) {:path path :val val})))
+               (let [local-members (into #{} (conj (:local-members state) {:path path :val val}))
+                     members (into #{} (conj (:members state) {:path path :val val})) ]
+                   (assoc state :local-members local-members :members members))
+                   
               )))
      (>!! member-event-ch {:left-members #{} :joined-members #{node-name}})
      )))
@@ -177,13 +179,13 @@
 (defn- members-joined [members u-members]
   (clojure.set/difference (into #{} (map :path u-members)) (into #{} (map :path members))))
 
-(defn heart-beat [connector {:keys [members locks empherals] :as state}]
+(defn heart-beat [connector {:keys [members local-members locks empherals] :as state}]
   "Sends out the heart beat and updates all TTL nodes,
    The members are queried and if any difference a fresh list created for the state
    which is returned"
-  (send-updates connector (concat members locks empherals))
+  (send-updates connector (concat local-members locks empherals))
     ;(prn "calling lef-members " members " " u-members)
-    (let [u-members (get-members connector)
+    (let [u-members (get-remote-members connector)
           left-members (if (> (count members) 0) (members-left members u-members) #{})
           joined-members (members-joined members u-members)]
         

@@ -1,12 +1,11 @@
 # group-redis
 
-Underconstruction !!!
 
 Group management api that supports locks, empheral data and membership join and leave notification
 
 ## Usage
 
-```[group-redis "0.1.3-SNAPSHOT"]```
+```[group-redis "0.1.4-SNAPSHOT"]```
 
 ### Joining a group
 
@@ -147,6 +146,14 @@ Set data with a path prefix of ```/[group-name]/persistent/[path..]```
 ;;  "/default-group/persistent/t/1"
 
 ```
+
+## Support
+
+Please contact me on gerritjvv@gmail.com 
+
+Twitter: gerritjvv
+
+or raise an [issue | https://github.com/gerritjvv/group-redis/issues]
 
 ## License
 
