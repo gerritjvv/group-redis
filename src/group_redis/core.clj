@@ -94,7 +94,7 @@
       (do 
         ;remove from state
         (try (dosync (alter state-ref (fn [state]
-                                   (assoc state :locks (drop-while #(= (:path %) lock-path) (:locks state))))))
+                                   (assoc state :locks (filter (complement #(= (:path %) lock-path)) (:locks state))))))
           (finally ;delete from redis
                  (car/wcar conn (car/del lock-path))))
         true)
