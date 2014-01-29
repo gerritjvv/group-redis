@@ -5,7 +5,7 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.1.6-SNAPSHOT"]```
+```[group-redis "0.1.7-SNAPSHOT"]```
 
 ### Joining a group
 

@@ -1,4 +1,4 @@
-(defproject group-redis "0.1.6-SNAPSHOT"
+(defproject group-redis "0.1.7-SNAPSHOT"
   :description "Group management api that supports locks, empheral data and membership join and leave notification"
   :url "https://github.com/gerritjvv/group-redis"
   :license {:name "Eclipse Public License"
@@ -16,6 +16,6 @@
      [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
      [com.taoensso/carmine "2.4.4"]
      [org.clojure/tools.logging "0.2.3"]            
-     [fun-utils "0.2.4"]
+     [fun-utils "0.3.1"]
 		 [midje "1.6-alpha2" :scope "test"]
 		 [org.clojure/clojure "1.5.1"]])
