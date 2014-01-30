@@ -1,5 +1,5 @@
 (ns group-redis.core
-  (:require [fun-utils.core :refer [fixdelay]]
+  (:require [fun-utils.core :refer [fixdelay stop-fixdelay]]
             [clojure.core.async :refer [chan >! <! >!! go mult tap untap sliding-buffer close!]]
             [taoensso.carmine :as car :refer [wcar]])
   (:import [java.net InetAddress]))
@@ -31,7 +31,7 @@
 
 (defn close [{:keys [state-ref member-event-ch heart-beat-ch]}]
   ;delete connection's state
-  (close! heart-beat-ch)
+  (stop-fixdelay heart-beat-ch)
   (close! member-event-ch)
   
   (dosync (alter state-ref (fn [state] {}))))
