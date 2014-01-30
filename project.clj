@@ -16,6 +16,6 @@
      [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
      [com.taoensso/carmine "2.4.4"]
      [org.clojure/tools.logging "0.2.3"]            
-     [fun-utils "0.3.3"]
+     [fun-utils "0.3.4"]
 		 [midje "1.6-alpha2" :scope "test"]
 		 [org.clojure/clojure "1.5.1"]])
