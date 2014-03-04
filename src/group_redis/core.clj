@@ -1,6 +1,7 @@
 (ns group-redis.core
   (:require [fun-utils.core :refer [fixdelay stop-fixdelay]]
             [clojure.core.async :refer [chan >! <! >!! go mult tap untap sliding-buffer close!]]
+            [clojure.tools.logging :refer [info]]
             [taoensso.carmine :as car :refer [wcar]])
   (:import [java.net InetAddress]))
 
@@ -90,6 +91,7 @@
   (let [lock-path (lock-path connector path)
         lock-val (car/wcar conn (car/get lock-path))]
     
+    ;(info "Release path " path " lock-path " lock-path " lock-val " lock-val)
     (if (= (:member lock-val) member)
       (do 
         ;remove from state
