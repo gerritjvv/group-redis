@@ -148,17 +148,18 @@
 
 (defn get-remote-members [{:keys [conn] :as connector}]
   (into #{} (map (fn [path]
-		    {:path path :val (System/currentTimeMillis)})
+		    {:path path :val (car/wcar conn 
+                            (car/get path))})
                     (car/wcar conn
 		       (car/keys (clojure.string/join [(members-path connector) "/*"]))))))
 
 (defn join 
   ([connector]
     (join connector host-name))
-  ([{:keys [conn conf member-event-ch state-ref] :as connector} node-name]
+  ([{:keys [conn conf member-event-ch state-ref sub-groups] :as connector} node-name]
     (let [{:keys [heart-beat-freq]} conf
           path (members-path connector node-name)
-          val (System/currentTimeMillis)]
+          val {:ts (System/currentTimeMillis) :sub-groups sub-groups}]
 	    (car/wcar conn 
 	              (car/set path val)
                 (car/expire path (calc-ttl heart-beat-freq))
@@ -211,7 +212,7 @@
 (defn create-group-connector 
   ([host]
    (create-group-connector host {}))
-  ([host {:keys [group-name heart-beat-freq] :or {group-name "default-group" heart-beat-freq 5} :as conf}]
+  ([host {:keys [group-name heart-beat-freq sub-groups sub-groups] :or {group-name "default-group" heart-beat-freq 5 sub-groups ["default"]} :as conf}]
   "Starts a connecion to redis, and a hearbeat in the background, and returns 
    a map with keys conn state-ref conf group-name and host"
   (let [state-ref (ref {:members #{} :locks #{} :empherals #{}})
@@ -220,7 +221,7 @@
         member-event-ch (chan (sliding-buffer 10))
         member-event-mult (mult member-event-ch)
         connector {:conn c :state-ref state-ref :conf conf2 :host host :group-name group-name
-                   :member-event-ch member-event-ch :member-event-mult member-event-mult}
+                   :member-event-ch member-event-ch :member-event-mult member-event-mult :sub-groups sub-groups}
     
 		    heart-beat-ch (fixdelay (* heart-beat-freq 1000) 
 								              (dosync 

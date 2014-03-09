@@ -5,7 +5,7 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.1.7-SNAPSHOT"]```
+```[group-redis "0.2.0-SNAPSHOT"]```
 
 ### Joining a group
 
@@ -19,7 +19,7 @@ Group management api that supports locks, empheral data and membership join and 
 (join c "123")
 
 (get-members c)
-;;({:path "/default-group/members/123", :val 1389465833687} {:path "/default-group/members/abc", :val 1389465833688})
+;;({:path "/default-group/members/123", :val {:ts 1389465833687 :sub-groups ["default"]} {:path "/default-group/members/abc", :val {:ts 1389465833688 :sub-groups ["default"]})
 ```
 
 Join a specific group
@@ -36,6 +36,23 @@ Join a specific group
 
 (get-members c)
 ;;({:path "/mygroup/members/123", :val 1389465833687} {:path "/mygroup/members/abc", :val 1389465833688})
+```
+
+### Members and sub groups
+
+Sometimes members need to be divided into sub groups or given attributes that divide them up logically.
+
+When creating a connection a series of attributes using the key :sub-groups can be defined for a connector e.g
+```clojure
+(def c (create-group-connector "localhost" {:group-name "mygroup" :heart-beat-freq 10 :sub-gruops ["abc" "123"]}))
+(join c)
+```
+
+Here the connection will belong to the sub groups "abc" and "123"
+To get the sub groups call:
+
+```clojure
+(map :sub-groups (get-members c))
 ```
 
 ### Leaving a group
