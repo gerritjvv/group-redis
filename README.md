@@ -9,6 +9,9 @@ Group management api that supports locks, empheral data and membership join and 
 
 For Maven and Gradle integration see: https://clojars.org/group-redis
 
+
+For java see the section on java below.
+
 ### Joining a group
 
 ```clojure
