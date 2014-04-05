@@ -5,7 +5,9 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.2.0-SNAPSHOT"]```
+```[group-redis "0.2.1-SNAPSHOT"]```
+
+For Maven and Gradle integration see: https://clojars.org/group-redis
 
 ### Joining a group
 
@@ -141,6 +143,8 @@ These sets expire when the connection is closed or the jvm crashes, or freezes.
 (empheral-get c "mykey1")
 ;; 1
 
+```
+
 ### Persistent set/get
 
 Set data with a path prefix of ```/[group-name]/persistent/[path..]```
@@ -162,6 +166,78 @@ Set data with a path prefix of ```/[group-name]/persistent/[path..]```
 ;;  "/default-group/persistent/t/2"
 ;;  "/default-group/persistent/t/1"
 
+```
+
+## Java
+
+Redis group provides a java class for easy integration with java projects.
+
+### Joining a group
+
+```java
+
+Object connector = RedisConn.create_group_connector("localhost");
+		
+RedisConn.join(connector);
+RedisConn.join(connector, "anotherhost");
+		
+Collection<Map<?,?>> members = RedisConn.getMembers(connector);
+System.out.println(Arrays.toString(members.toArray()));
+		
+assertEquals(members.size(), 2);
+		
+RedisConn.close(connector);
+```
+
+### Locks
+
+```java
+
+Object connector = RedisConn.create_group_connector("localhost");
+		
+assertTrue(RedisConn.lock(connector, "lock1"));
+assertFalse(RedisConn.lock(connector, "lock1"));
+		
+assertFalse(RedisConn.release(connector, "another-member", "lock1"));
+		
+
+assertTrue(RedisConn.release(connector, "lock1"));
+assertFalse(RedisConn.release(connector, "lock1"));
+	
+assertTrue(RedisConn.reentrant_lock(connector, "lock2"));
+assertTrue(RedisConn.reentrant_lock(connector, "lock2"));
+		
+assertFalse(RedisConn.reentrant_lock(connector, "another-member", "lock2"));
+		
+assertFalse(RedisConn.release(connector, "another-member", "lock2"));
+		
+assertTrue(RedisConn.release(connector, "lock2"));
+	
+RedisConn.close(connector);
+```
+
+## Empheral Get/Set
+
+```java
+
+Object connector = RedisConn.create_group_connector("localhost");
+		
+RedisConn.empheral_set(connector, "mykey1", 1);
+assertEquals(RedisConn.empheral_get(connector, "mykey1"), 1);
+		
+RedisConn.close(connector);
+```
+
+## Persistent Get/Set
+
+```java
+
+Object connector = RedisConn.create_group_connector("localhost");
+		
+RedisConn.persistent_set(connector, "mykey2", 1);
+assertEquals(RedisConn.persistent_get(connector, "mykey2"), 1);
+RedisConn.close(connector);
+		
 ```
 
 ## Support
