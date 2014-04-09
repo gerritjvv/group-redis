@@ -167,6 +167,7 @@
      
      (dosync (alter state-ref 
             (fn [state]
+               ;we filter out the old path because the :path :val combination might be different
                (let [local-members (into #{} (conj (filter (complement #(= (:path %) path)) (:local-members state)) {:path path :val val}))
                      members (into #{} (conj (filter (complement #(= (:path %) path)) (:members state)) {:path path :val val})) ]
                    (assoc state :local-members local-members :members members)))))
