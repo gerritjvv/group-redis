@@ -164,17 +164,14 @@
 	              (car/set path val)
                 (car/expire path (calc-ttl heart-beat-freq))
                 )
+     
      (dosync (alter state-ref 
             (fn [state]
-               (let [local-members (into #{} (conj (:local-members state) {:path path :val val}))
-                     members (into #{} (conj (:members state) {:path path :val val})) ]
-                   (assoc state :local-members local-members :members members))
-                   
-              )))
+               (let [local-members (into #{} (conj (filter (complement #(= (:path %) path)) (:local-members state)) {:path path :val val}))
+                     members (into #{} (conj (filter (complement #(= (:path %) path)) (:members state)) {:path path :val val})) ]
+                   (assoc state :local-members local-members :members members)))))
      (>!! member-event-ch {:left-members #{} :joined-members #{node-name}})
      )))
-     
-       
 	    
 (defn- members-left [members u-members]
   (clojure.set/difference (into #{} (map :path members)) (into #{} (map :path u-members))))
@@ -212,7 +209,6 @@
 (defn add-sub-group
   "Adds a sub group to the current connection" 
   [{:keys [sub-groups]} sub-group]
-  
   (dosync (alter sub-groups conj sub-group)))
 
 (defn remove-sub-group

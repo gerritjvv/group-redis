@@ -72,7 +72,9 @@ Sub groups can be added and removed to an active connection.
 (join c) ; we mus rejoin for the member data to reflect this
 
 (remove-sub-group c "mynewsubgroup")
+(leave c)
 (join c)
+
 
 ```
 
