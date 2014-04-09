@@ -159,7 +159,7 @@
   ([{:keys [conn conf member-event-ch state-ref sub-groups] :as connector} node-name]
     (let [{:keys [heart-beat-freq]} conf
           path (members-path connector node-name)
-          val {:ts (System/currentTimeMillis) :sub-groups sub-groups}]
+          val {:ts (System/currentTimeMillis) :sub-groups @sub-groups}]
 	    (car/wcar conn 
 	              (car/set path val)
                 (car/expire path (calc-ttl heart-beat-freq))
@@ -209,6 +209,17 @@
     (tap member-event-mult ch)
     ch))
 
+(defn add-sub-group
+  "Adds a sub group to the current connection" 
+  [{:keys [sub-groups]} sub-group]
+  
+  (dosync (alter sub-groups conj sub-group)))
+
+(defn remove-sub-group
+  "Removes a sub group to the current connection" 
+  [{:keys [sub-groups]} sub-group]
+  (dosync (alter sub-groups disj sub-group)))
+
 (defn create-group-connector 
   ([host]
    (create-group-connector host {}))
@@ -221,7 +232,7 @@
         member-event-ch (chan (sliding-buffer 10))
         member-event-mult (mult member-event-ch)
         connector {:conn c :state-ref state-ref :conf conf2 :host host :group-name group-name
-                   :member-event-ch member-event-ch :member-event-mult member-event-mult :sub-groups sub-groups}
+                   :member-event-ch member-event-ch :member-event-mult member-event-mult :sub-groups (ref (set sub-groups))}
     
 		    heart-beat-ch (fixdelay (* heart-beat-freq 1000) 
 								              (dosync 

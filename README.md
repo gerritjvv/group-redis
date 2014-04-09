@@ -5,10 +5,15 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.2.1-SNAPSHOT"]```
+```[group-redis "0.4.0"]```
 
 For Maven and Gradle integration see: https://clojars.org/group-redis
 
+```xml
+<repository>
+ <id>clojars.org</id> 
+ <url>http://clojars.org/repo</url>
+</repository>
 
 For java see the section on java below.
 
@@ -58,6 +63,17 @@ To get the sub groups call:
 
 ```clojure
 (map :sub-groups (get-members c))
+```
+
+Sub groups can be added and removed to an active connection.
+
+```clojure
+(add-sub-group c "mynewsubgroup")
+(join c) ; we mus rejoin for the member data to reflect this
+
+(remove-sub-group c "mynewsubgroup")
+(join c)
+
 ```
 
 ### Leaving a group

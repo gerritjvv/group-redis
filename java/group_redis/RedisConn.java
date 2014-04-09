@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import clojure.lang.PersistentArrayMap;
+import clojure.lang.PersistentVector;
 import clojure.lang.RT;
 import clojure.lang.Symbol;
 
@@ -19,6 +20,14 @@ public class RedisConn {
 	@SuppressWarnings("unchecked")
 	public static final Collection<Map<?, ?>> getMembers(Object connector){
 		return (Collection<Map<?, ?>>) RT.var("group-redis.core", "get-members").invoke(connector);
+	}
+	
+	public static final void addSubGroup(Object connector, String subGroup){
+		RT.var("group-redis.core", "add-sub-group").invoke(connector, subGroup);
+	}
+	
+	public static final void removeSubGroup(Object connector, String subGroup){
+		RT.var("group-redis.core", "remove-sub-group").invoke(connector, subGroup);
 	}
 	
 	public static final void join(Object connector){
@@ -65,6 +74,16 @@ public class RedisConn {
 	 * @return
 	 */
 	public static final Object create_group_connector(String host, Map<String, Object> props){
+		
+		if(!props.containsKey("heart-beat-freq"))
+			props.put("heart-beat-freq", 5);
+		
+		if(!props.containsKey("group-name"))
+			props.put("group-name", "default-group");
+		
+		if(!props.containsKey("sub-groups"))
+			props.put("sub-group", PersistentVector.create("default"));
+		
 		return RT.var("group-redis.core", "create-group-connector").invoke(host, toMap(props));
 	}
 	
