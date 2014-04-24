@@ -9,8 +9,15 @@
     0
    (Math/ceil (/ t n))))
 
-(defn distribute-ids [members ids]
+(defn distribute-ids 
+  "Members and ids should be both collections. 
+   A near to equal distribution of ids for each member will be calculated using (ceil (/ (count members) (count n)))
+   Returns a map where each key is a member and the value is a list of ids uniquely assigned for that member
+   e.g (distribute-ids [\"a\" \"b\" \"c\"] [1 2 3 4 5 6 7 8 9 10]) will return {\"a\" (7 1 4 6), \"b\" (3 2 9 5), \"c\" (10 8)}"
+  [members ids]
   (if (not (or (empty? members) (empty? ids)))
     (let [d (upper-divisor (count ids) (count members))]
      (apply hash-map (interleave  (set members) (partition-all d (set ids)))))))
+
+
 
