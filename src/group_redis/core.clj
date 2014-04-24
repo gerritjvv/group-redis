@@ -80,8 +80,19 @@
                 (car/expire final-path expire)
               ))))
 
-(defn empheral-get [connector path ]
-  (->> connector :state-ref deref :empherals (filter #(= (:path %) (empherals-path connector path) )) first :val))
+(defn empheral-del [{:keys [conn state-ref] :as connector} path]
+  (let [final-path (empherals-path connector path)]
+    (dosync (alter state-ref (fn [state] 
+                              (assoc state :empherals (set (filter #(not= (:path %) final-path) (:empherals state)))))))
+    (car/wcar conn (car/del final-path))))
+
+(defn empheral-get [{:keys [conn state-ref] :as connector} path]
+  (let [final-path (empherals-path connector path)]
+    (car/wcar conn (car/get final-path))))
+
+(defn empheral-ls [{:keys [conn state-ref] :as connector} path]
+  (let [final-path (empherals-path connector path)]
+     (car/wcar conn (car/keys final-path))))
 
 (defn release 
   "Releases the lock, return true if the lock was released, false otherwise"
