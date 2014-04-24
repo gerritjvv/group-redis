@@ -18,9 +18,10 @@
 
   :dependencies [
      [org.clojure/core.async "0.1.267.0-0d7780-alpha"]
+     [org.clojure/test.check "0.5.7"]
      [com.taoensso/carmine "2.4.4"]
      [org.clojure/tools.logging "0.2.3"]            
      [fun-utils "0.4.0"]
 		 [midje "1.6-alpha2" :scope "test"]
      [junit/junit "4.11" :scope "test"]
-		 [org.clojure/clojure "1.5.1"]])
+		 [org.clojure/clojure "1.6.0" :scope "provided"]])
