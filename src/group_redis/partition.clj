@@ -110,11 +110,11 @@
                  )
                
                (if (is-partition-flag? connector topic)
-		             (do (Thread/sleep 200) (recur (inc c)))))))
+		             (do (Thread/sleep 100) (recur (inc c)))))))
       
       ;print out if this took longer than a second
       (if (> (- (System/currentTimeMillis) start-time) 1000)
-        (warn "waiting on partition flag took " (- (System/currentTimeMillis) start) "ms")) 
+        (warn "waiting on partition flag took " (- (System/currentTimeMillis) start-time) "ms")) 
       
       true)
     false))
