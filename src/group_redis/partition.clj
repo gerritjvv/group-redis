@@ -55,21 +55,10 @@
   ;(prn "perform-assignments is-flag " (empheral-get connector (partition-flag-path topic)) " - d1 "   (empheral-get connector (assignments-path topic))
    ; " d2 " (distribute-ids (get-member-keys connector topic) ids)  " ids " ids " members " (get-member-keys connector topic))
   
-  (prn 
-    "path " (assignments-path topic)
-    " 1rst : " (empheral-get connector (partition-flag-path topic)) " = " (is-partition-flag? connector topic)
-    " 2nd : " 
-    
-    (not= (empheral-get connector (assignments-path topic)) (distribute-ids (get-member-keys connector topic) ids))
-    
-    " 3rd "  (and ;only perform assignments if the partion flag is false and the calculated assignment differs from the saved one
-        (not (empheral-get connector (partition-flag-path topic)))
-        (not= (empheral-get connector (assignments-path topic)) (distribute-ids (get-member-keys connector topic) ids))))
   (if (and ;only perform assignments if the partion flag is false and the calculated assignment differs from the saved one
         (not (empheral-get connector (partition-flag-path topic)))
         (not= (empheral-get connector (assignments-path topic)) (distribute-ids (get-member-keys connector topic) ids)))
       (do 
-        (prn "set!!")
         (expire-set connector 120 (partition-flag-path topic) true))
       
       ))
@@ -82,7 +71,6 @@
 
    Returns true if any waiting was actually done (i.e if the sync barrier was entered or not)"
   [connector host topic ids]
-  (prn host " is-partition-flag? " (is-partition-flag? connector topic) " topic " topic "is master " (is-master!? connector host topic))
   (if (is-partition-flag? connector topic)
     (let [start-time (System/currentTimeMillis)] 
       ;notify syncpoint
@@ -103,11 +91,8 @@
                      (doseq [ks (empheral-ls connector (sync-point-path-keys connector topic))]
                        (empheral-del connector (:path ks)))
                      ;set the assignments and un set the partition flag
-                     (prn "set assignements " members " " ids " = " (distribute-ids members ids))
                      (empheral-set connector (assignments-path topic) (distribute-ids members ids))
-                     (empheral-del connector (partition-flag-path topic)))
-                   (prn  "sync keys " (empheral-ls connector (sync-point-path-keys connector topic)) " members " (map :path (get-partition-members connector topic))))
-                 )
+                     (empheral-del connector (partition-flag-path topic)))))
                
                (if (is-partition-flag? connector topic)
 		             (do (Thread/sleep 100) (recur (inc c)))))))
@@ -130,7 +115,7 @@
     (controlled-assignments connector host-name topic ids curr-assignments))
   ([connector host topic ids curr-assignments]
      ;identify master
-    (prn "is-master!? " host  " " (is-master!? connector host topic))
+    ;(prn "is-master!? " host  " " (is-master!? connector host topic))
     (empheral-set connector (str topic "/partition-members/" host) (System/currentTimeMillis))
      
     (if (is-master!? connector host topic) ;here the master sets the assignment flag (sync barrier) only if needed
