@@ -77,7 +77,7 @@
     (car/wcar conn 
               (do
                 (car/set final-path val)
-                (car/expire final-path 100)
+                (car/expire final-path expire)
               ))))
 
 (defn empheral-set [{:keys [conn state-ref conf] :as connector} path val]
