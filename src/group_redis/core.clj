@@ -68,7 +68,18 @@
     (car/wcar conn
               (doseq [[path val] data]
                 (car/set (persistent-path connector path) val))))
-  
+
+(defn expire-set 
+  "Use empheral-get to get data"
+  [{:keys [conn state-ref conf] :as connector} expire path val]
+  (let [final-path (empherals-path connector path)]
+    (prn "set final path " final-path)
+    (car/wcar conn 
+              (do
+                (car/set final-path val)
+                (car/expire final-path 100)
+              ))))
+
 (defn empheral-set [{:keys [conn state-ref conf] :as connector} path val]
   (let [final-path (empherals-path connector path)
         {:keys [heart-beat-freq]} conf

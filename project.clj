@@ -1,4 +1,4 @@
-(defproject group-redis "0.6.0-SNAPSHOT"
+(defproject group-redis "0.6.1-SNAPSHOT"
   :description "Group management api that supports locks, empheral data and membership join and leave notification"
   :url "https://github.com/gerritjvv/group-redis"
   :license {:name "Eclipse Public License"

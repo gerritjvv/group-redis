@@ -1,6 +1,6 @@
 (ns group-redis.partition
-  (:require [group-redis.core :refer [host-name empheral-set empheral-get empheral-ls empheral-del join reentrant-lock release get-remote-members]]
-            [clojure.tools.logging :refer [info]]))
+  (:require [group-redis.core :refer [expire-set host-name empheral-set empheral-get empheral-ls empheral-del join reentrant-lock release get-remote-members]]
+            [clojure.tools.logging :refer [info warn]]))
 
 ;Env n members and a list of paths/ids, each member should get a near to equal share of ids,
 ;but no member can have an id that another member already has.
@@ -53,21 +53,38 @@
   "Read the members, sets the partition flag to true, sets the assignemnts from distribute-ids and finally sets the partition flag to nil"
   [connector host topic ids]
   ;(prn "perform-assignments is-flag " (empheral-get connector (partition-flag-path topic)) " - d1 "   (empheral-get connector (assignments-path topic))
-   ; " d2 " (distribute-ids (get-member-keys connector) ids)  " ids " ids " members " (get-member-keys connector))
-  (if (and ;only perform assignments if the partion flat is false and the calculated assignment differs from the saved one
+   ; " d2 " (distribute-ids (get-member-keys connector topic) ids)  " ids " ids " members " (get-member-keys connector topic))
+  
+  (prn 
+    "path " (assignments-path topic)
+    " 1rst : " (empheral-get connector (partition-flag-path topic)) " = " (is-partition-flag? connector topic)
+    " 2nd : " 
+    
+    (not= (empheral-get connector (assignments-path topic)) (distribute-ids (get-member-keys connector topic) ids))
+    
+    " 3rd "  (and ;only perform assignments if the partion flag is false and the calculated assignment differs from the saved one
+        (not (empheral-get connector (partition-flag-path topic)))
+        (not= (empheral-get connector (assignments-path topic)) (distribute-ids (get-member-keys connector topic) ids))))
+  (if (and ;only perform assignments if the partion flag is false and the calculated assignment differs from the saved one
         (not (empheral-get connector (partition-flag-path topic)))
         (not= (empheral-get connector (assignments-path topic)) (distribute-ids (get-member-keys connector topic) ids)))
-      (empheral-set connector (partition-flag-path topic) true)))
+      (do 
+        (prn "set!!")
+        (expire-set connector 120 (partition-flag-path topic) true))
+      
+      ))
 
 (defn- wait-on-partition-flag! 
   "The controlling is defined based on an assignent flag that only the current master can set and unset
    It acts as a sync barrier, that when set the master will wait for all members to enter this barrier, only once
    all members have entered this barrier will the master set the new assignments and unset the barrier, only then can
-   the members escape the barrier and continue. The whole process is protected by a timeout of 120 seconds"
+   the members escape the barrier and continue. The whole process is protected by a timeout of 120 seconds
+
+   Returns true if any waiting was actually done (i.e if the sync barrier was entered or not)"
   [connector host topic ids]
-  ;(prn host " is-partition-flag? " (is-partition-flag? connector topic) " topic " topic "is master " (is-master!? connector host topic))
+  (prn host " is-partition-flag? " (is-partition-flag? connector topic) " topic " topic "is master " (is-master!? connector host topic))
   (if (is-partition-flag? connector topic)
-    (do 
+    (let [start-time (System/currentTimeMillis)] 
       ;notify syncpoint
       ;(prn ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> set syncpoint path " (sync-point-path connector host topic) )
       (empheral-set connector (sync-point-path connector host topic) nil)
@@ -86,28 +103,43 @@
                      (doseq [ks (empheral-ls connector (sync-point-path-keys connector topic))]
                        (empheral-del connector (:path ks)))
                      ;set the assignments and un set the partition flag
+                     (prn "set assignements " members " " ids " = " (distribute-ids members ids))
                      (empheral-set connector (assignments-path topic) (distribute-ids members ids))
                      (empheral-del connector (partition-flag-path topic)))
                    (prn  "sync keys " (empheral-ls connector (sync-point-path-keys connector topic)) " members " (map :path (get-partition-members connector topic))))
                  )
                
                (if (is-partition-flag? connector topic)
-		             (do (Thread/sleep 200) (recur (inc c))))))))))
+		             (do (Thread/sleep 200) (recur (inc c)))))))
+      
+      ;print out if this took longer than a second
+      (if (> (- (System/currentTimeMillis) start-time) 1000)
+        (warn "waiting on partition flag took " (- (System/currentTimeMillis) start) "ms")) 
+      
+      true)
+    false))
 
 (defn controlled-assignments 
-  ([connector topic ids]
-    (controlled-assignments connector host-name topic ids))
-  ([connector host topic ids]
+  "Public function to call when several members are participating in a group that should consume the ids, one member will be automatically selected as a member (by way of an exclusive reentrant lock).
+   This function contains a waiting function that acts as a lock barrier where each member must wait for all other memebers to enter the barrier to receive assignments. The barrier is only entered
+   when the master is calculating new assignments, this means if no member leaves or enters the barrier will only be entered once on startup and then only again if any member leaves or enters, causing
+   very little impact on performance.  
+   As a performance improvemnt the curr-assignments acts as a cache so that if no new assignment was made the curr-assignments is returned, otherwise the new assignments are returned, its the responsibility of
+   the calling function to ensure that the curr-assignments is actually the previously received assignments, doing this allows us to have caching without actually saving global state."
+  ([connector topic ids curr-assignments]
+    (controlled-assignments connector host-name topic ids curr-assignments))
+  ([connector host topic ids curr-assignments]
      ;identify master
-    ;(prn "is-master!? " host  " " (is-master!? connector host topic))
+    (prn "is-master!? " host  " " (is-master!? connector host topic))
     (empheral-set connector (str topic "/partition-members/" host) (System/currentTimeMillis))
      
     (if (is-master!? connector host topic) ;here the master sets the assignment flag (sync barrier) only if needed
       (perform-assignments! connector host-name topic ids))
     
     ;if the sync barrier is set this function will block till the assignment process has been completed
-    (wait-on-partition-flag! connector host topic ids)
-    
-    (empheral-get connector (assignments-path topic))))
-      
+    (if (wait-on-partition-flag! connector host topic ids)
+      (empheral-get connector (assignments-path topic))
+      (if (not curr-assignments)
+        (empheral-get connector (assignments-path topic))
+        curr-assignments))))
         

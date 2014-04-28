@@ -5,7 +5,7 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.4.0"]```
+```[group-redis "0.6.1-SNAPSHOT"]```
 
 For Maven and Gradle integration see: https://clojars.org/group-redis
 
@@ -259,6 +259,20 @@ RedisConn.persistent_set(connector, "mykey2", 1);
 assertEquals(RedisConn.persistent_get(connector, "mykey2"), 1);
 RedisConn.close(connector);
 		
+```
+
+## Member group management and task assignment (resource scheduling)
+
+Some basic functions are provided to help with assigning work (here called ids) exclusively between nodes of the same group.
+
+A simple master assignment scheme is used by using an exclusive lock that decides which node is a master, any node at any time can be the master
+but only one node at any time can be master.
+
+The function to use is: controlled-assignments
+
+TODO: Provide example
+```clojure
+
 ```
 
 ## Support
