@@ -80,8 +80,8 @@
                 (car/expire final-path expire)
               ))))
 
-(defn empheral-set [{:keys [conn state-ref conf] :as connector} path val]
-  (let [final-path (empherals-path connector path)
+(defn empheral-set [{:keys [conn state-ref conf] :as connector} path val & {:keys [absolute] :or {absolute false}}]
+  (let [final-path (if absolute path (empherals-path connector path))
         {:keys [heart-beat-freq]} conf
         expire (calc-ttl heart-beat-freq)]
     (dosync (alter state-ref (fn [state] (assoc state :empherals (into #{} (conj (:empherals state) {:path final-path :val val}))))))
@@ -91,18 +91,18 @@
                 (car/expire final-path expire)
               ))))
 
-(defn empheral-del [{:keys [conn state-ref] :as connector} path]
-  (let [final-path (empherals-path connector path)]
+(defn empheral-del [{:keys [conn state-ref] :as connector} path & {:keys [absolute] :or {absolute false}}]
+  (let [final-path (if absolute path (empherals-path connector path))]
     (dosync (alter state-ref (fn [state] 
                               (assoc state :empherals (set (filter #(not= (:path %) final-path) (:empherals state)))))))
     (car/wcar conn (car/del final-path))))
 
-(defn empheral-get [{:keys [conn state-ref] :as connector} path]
-  (let [final-path (empherals-path connector path)]
+(defn empheral-get [{:keys [conn state-ref] :as connector} path & {:keys [absolute] :or {absolute false}}]
+  (let [final-path (if absolute path (empherals-path connector path))]
     (car/wcar conn (car/get final-path))))
 
-(defn empheral-ls [{:keys [conn state-ref] :as connector} path]
-  (let [final-path (empherals-path connector path)]
+(defn empheral-ls [{:keys [conn state-ref] :as connector} path & {:keys [absolute] :or {absolute false}}]
+  (let [final-path (if absolute path (empherals-path connector path))]
      (car/wcar conn (car/keys final-path))))
 
 (defn release 

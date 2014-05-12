@@ -21,9 +21,11 @@
     (let [d (upper-divisor (count ids) (count members))]
      (apply hash-map (interleave  (set members) (partition-all d (set ids)))))))
 
-
 (defn get-partition-members [connector topic]
+  (doseq [member (empheral-ls connector (str topic "/partition-members/*"))]
+    (empheral-get connector member))
   (empheral-ls connector (str topic "/partition-members/*")))
+    
 
 (defn- is-master!? 
   "Get a lock on $topic/master if the lock is not attained it means this host is not the master"
@@ -81,7 +83,15 @@
       ;loop in partition flag, only the master can unset the partition flag      
 		  (loop [c 0]
 		      (if (> c 600)
-		        (throw (RuntimeException. "Waited on partition flag == true for over 2 minutes something. Possible cause would be that not all members are working correctly"))
+		        (if (is-master!? connector host topic)
+              (do
+                (info "Waited on partition flag for over 2 minutes. Possible cause could be that not all members are working correctly. Resetting partition flags")
+                 ;it took too long for all members to enterh the partition-flag, we can only delete everything here and exit
+                 ;delete all keys in sync path
+                (empheral-del connector (partition-flag-path topic))
+                (doseq [ks (empheral-ls connector (sync-point-path-keys connector topic))]
+                   (empheral-del connector (:path ks)))
+                 ))
 		        (do
                ;if master and all the nodes have written to the sync point, write the new assignments and set the partition flag to nil
                (if (is-master!? connector host topic)

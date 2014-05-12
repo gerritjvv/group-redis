@@ -46,7 +46,7 @@
              (let [c (create-group-connector "localhost")]
                
                (empheral-set c "abc" 1)
-               (empheral-get c "abc") => 1
+               (empheral-get c "abc") => "1"
                
                ))
        
