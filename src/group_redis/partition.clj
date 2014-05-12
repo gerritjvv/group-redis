@@ -22,8 +22,9 @@
      (apply hash-map (interleave  (set members) (partition-all d (set ids)))))))
 
 (defn get-partition-members [connector topic]
+  ;;we iterate over the members to ensure they have all been expired if any
   (doseq [member (empheral-ls connector (str topic "/partition-members/*"))]
-    (empheral-get connector member))
+    (empheral-get connector member :absolute true))
   (empheral-ls connector (str topic "/partition-members/*")))
     
 
