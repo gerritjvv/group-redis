@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import clojure.lang.Keyword;
 import clojure.lang.PersistentArrayMap;
 import clojure.lang.PersistentVector;
 import clojure.lang.RT;
@@ -116,7 +117,7 @@ public class RedisConn {
 		List<Object> propvals = new ArrayList<Object>();
 
 		for (Map.Entry<String, Object> entry : map.entrySet()) {
-			propvals.add(entry.getKey());
+			propvals.add(Keyword.intern(entry.getKey()));
 			propvals.add(entry.getValue());
 		}
 		

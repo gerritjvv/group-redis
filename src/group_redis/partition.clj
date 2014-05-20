@@ -62,6 +62,8 @@
         (not (empheral-get connector (partition-flag-path topic)))
         (not= (empheral-get connector (assignments-path topic)) (distribute-ids (get-member-keys connector topic) ids)))
       (do 
+        (info "assignments on redis " (empheral-get connector (assignments-path topic)) )
+        (info "do not match stoerd " (distribute-ids (get-member-keys connector topic) ids))
         (expire-set connector 120 (partition-flag-path topic) true))
       
       ))
@@ -102,6 +104,7 @@
                      (doseq [ks (empheral-ls connector (sync-point-path-keys connector topic))]
                        (empheral-del connector (:path ks)))
                      ;set the assignments and un set the partition flag
+                     (info "Setting assignments " topic " "  (distribute-ids members ids))
                      (empheral-set connector (assignments-path topic) (distribute-ids members ids))
                      (empheral-del connector (partition-flag-path topic)))))
                
@@ -110,7 +113,7 @@
       
       ;print out if this took longer than a second
       (if (> (- (System/currentTimeMillis) start-time) 1000)
-        (warn "waiting on partition flag took " (- (System/currentTimeMillis) start-time) "ms")) 
+        (warn "waiting on partition flag[ " topic "] took " (- (System/currentTimeMillis) start-time) "ms")) 
       
       true)
     false))
