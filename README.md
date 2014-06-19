@@ -5,15 +5,7 @@ Group management api that supports locks, empheral data and membership join and 
 
 ## Usage
 
-```[group-redis "0.6.1-SNAPSHOT"]```
-
-For Maven and Gradle integration see: https://clojars.org/group-redis
-
-```xml
-<repository>
- <id>clojars.org</id> 
- <url>http://clojars.org/repo</url>
-</repository>
+[![Clojars Project](http://clojars.org/group-redis/latest-version.svg)](http://clojars.org/group-redis)
 
 For java see the section on java below.
 
